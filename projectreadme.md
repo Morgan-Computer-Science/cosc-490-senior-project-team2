@@ -47,16 +47,16 @@ Control Agent (Chief of Staff)
 
 | Agent | Responsibility |
 |-------|---------------|
-| 🏦 **Economics** | Fiscal policy, trade, inflation, employment, and macroeconomic impact |
-| 🛡️ **National Security** | Defense posture, intelligence threats, military readiness |
-| 🌐 **Foreign Policy** | Diplomatic relations, international agreements, geopolitical strategy |
-| 💻 **Cyber Security** | Digital infrastructure threats, data protection, cyber warfare risks |
-| 🏥 **Public Health** | Epidemics, healthcare capacity, public health policy |
-| 🚧 **Immigration & Border** | Border security, immigration policy, asylum and enforcement |
-| ⚡ **Energy & Environment** | Energy supply, climate policy, environmental regulation |
-| 🚨 **Disaster Response & Resilience** | Natural disasters, emergency management, infrastructure recovery |
-| 🌾 **Agriculture & Food Security** | Food supply chains, agricultural policy, famine and drought risk |
-| 🏘️ **Housing & Urban Stability** | Housing affordability, urban infrastructure, community resilience |
+|  **Economics** | Fiscal policy, trade, inflation, employment, and macroeconomic impact |
+|  **National Security** | Defense posture, intelligence threats, military readiness |
+|  **Foreign Policy** | Diplomatic relations, international agreements, geopolitical strategy |
+|  **Cyber Security** | Digital infrastructure threats, data protection, cyber warfare risks |
+|  **Public Health** | Epidemics, healthcare capacity, public health policy |
+|  **Immigration & Border** | Border security, immigration policy, asylum and enforcement |
+|  **Energy & Environment** | Energy supply, climate policy, environmental regulation |
+|  **Disaster Response & Resilience** | Natural disasters, emergency management, infrastructure recovery |
+|  **Agriculture & Food Security** | Food supply chains, agricultural policy, famine and drought risk |
+|  **Housing & Urban Stability** | Housing affordability, urban infrastructure, community resilience |
 
 ---
 
