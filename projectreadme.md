@@ -88,11 +88,6 @@ The project is currently in the planning and initial setup phase, progressing ac
 - [ ] End-to-end evaluation
 
 ---
-
-## Getting Started
-
-> ⚠️ This project is under active development. Setup instructions will be updated as the codebase matures.
-
 ### Prerequisites
 
 - Python 3.9+
