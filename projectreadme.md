@@ -20,11 +20,16 @@ User Scenario
      ▼
 Control Agent (Chief of Staff)
      │
-     ├──▶ Domain Agent 1
-     ├──▶ Domain Agent 2
-     ├──▶ Domain Agent 3
-     ├──▶ ...
-     └──▶ Domain Agent 10
+     ├──▶ Economics Agent
+     ├──▶ National Security Agent
+     ├──▶ Foreign Policy Agent
+     ├──▶ Cyber Security Agent
+     ├──▶ Public Health Agent
+     ├──▶ Immigration & Border Agent
+     ├──▶ Energy & Environment Agent
+     ├──▶ Disaster Response & Resilience Agent
+     ├──▶ Agriculture & Food Security Agent
+     └──▶ Housing & Urban Stability Agent
               │
               ▼
      Select Top 2 Most Relevant
@@ -35,6 +40,23 @@ Control Agent (Chief of Staff)
               ▼
      Executive Brief Output
 ```
+
+---
+
+## Domain Agents
+
+| Agent | Responsibility |
+|-------|---------------|
+| 🏦 **Economics** | Fiscal policy, trade, inflation, employment, and macroeconomic impact |
+| 🛡️ **National Security** | Defense posture, intelligence threats, military readiness |
+| 🌐 **Foreign Policy** | Diplomatic relations, international agreements, geopolitical strategy |
+| 💻 **Cyber Security** | Digital infrastructure threats, data protection, cyber warfare risks |
+| 🏥 **Public Health** | Epidemics, healthcare capacity, public health policy |
+| 🚧 **Immigration & Border** | Border security, immigration policy, asylum and enforcement |
+| ⚡ **Energy & Environment** | Energy supply, climate policy, environmental regulation |
+| 🚨 **Disaster Response & Resilience** | Natural disasters, emergency management, infrastructure recovery |
+| 🌾 **Agriculture & Food Security** | Food supply chains, agricultural policy, famine and drought risk |
+| 🏘️ **Housing & Urban Stability** | Housing affordability, urban infrastructure, community resilience |
 
 ---
 
@@ -51,6 +73,8 @@ Control Agent (Chief of Staff)
 
 ## Project Status
 
+> **Phase: Early Development**
+
 The project is currently in the planning and initial setup phase, progressing according to timeline.
 
 - [x] Project scope finalized
@@ -64,6 +88,10 @@ The project is currently in the planning and initial setup phase, progressing ac
 - [ ] End-to-end evaluation
 
 ---
+
+## Getting Started
+
+> ⚠️ This project is under active development. Setup instructions will be updated as the codebase matures.
 
 ### Prerequisites
 
@@ -94,3 +122,15 @@ streamlit run app.py
 3. **Full Agent Suite** — Expand to all ten domain agents
 4. **Evaluation** — Test system effectiveness on complex decision-making scenarios
 5. **Refinement** — Iterate based on output quality and user feedback
+
+---
+
+## Contributing
+
+This project is being developed by a collaborative team. Contribution guidelines will be added as the project matures.
+
+---
+
+## License
+
+To be determined.
