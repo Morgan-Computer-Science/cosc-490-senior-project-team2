@@ -122,15 +122,3 @@ streamlit run app.py
 3. **Full Agent Suite** — Expand to all ten domain agents
 4. **Evaluation** — Test system effectiveness on complex decision-making scenarios
 5. **Refinement** — Iterate based on output quality and user feedback
-
----
-
-## Contributing
-
-This project is being developed by a collaborative team. Contribution guidelines will be added as the project matures.
-
----
-
-## License
-
-To be determined.
