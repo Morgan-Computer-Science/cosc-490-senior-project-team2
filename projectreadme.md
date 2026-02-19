@@ -67,10 +67,6 @@ The project is currently in the planning and initial setup phase, progressing ac
 
 ---
 
-## Getting Started
-
-> ⚠️ This project is under active development. Setup instructions will be updated as the codebase matures.
-
 ### Prerequisites
 
 - Python 3.9+
@@ -100,15 +96,3 @@ streamlit run app.py
 3. **Full Agent Suite** — Expand to all ten domain agents
 4. **Evaluation** — Test system effectiveness on complex decision-making scenarios
 5. **Refinement** — Iterate based on output quality and user feedback
-
----
-
-## Contributing
-
-This project is being developed by a collaborative team. Contribution guidelines will be added as the project matures.
-
----
-
-## License
-
-To be determined.
