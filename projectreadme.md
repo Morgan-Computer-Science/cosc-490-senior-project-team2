@@ -51,8 +51,6 @@ Control Agent (Chief of Staff)
 
 ## Project Status
 
-> **Phase: Early Development**
-
 The project is currently in the planning and initial setup phase, progressing according to timeline.
 
 - [x] Project scope finalized
