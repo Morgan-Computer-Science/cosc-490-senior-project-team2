@@ -1,0 +1,16 @@
+# Environment and credentials — NEVER commit these
+.env
+credentials.json
+
+# Memory data
+memory/*.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# Editor
+.DS_Store
+.vscode/
