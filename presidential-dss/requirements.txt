@@ -1,0 +1,4 @@
+google-cloud-aiplatform>=1.38.0
+google-adk>=0.1.0
+streamlit>=1.32.0
+python-dotenv>=1.0.0
