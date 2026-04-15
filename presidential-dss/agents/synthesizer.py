@@ -2,7 +2,29 @@ import os
 from dotenv import load_dotenv
 import vertexai
 from vertexai.generative_models import GenerativeModel
+
 load_dotenv()
+
+FALLBACK = (
+    "SITUATION SUMMARY\n"
+    "Unable to generate summary due to model error.\n\n"
+    "KEY POLICY OPTIONS\n"
+    "Re-run analyses and validate assumptions.\n\n"
+    "PRINCIPAL RISKS\n"
+    "Decision latency and incomplete situational awareness.\n\n"
+    "MAJOR TRADEOFFS\n"
+    "Timeliness versus analytical depth.\n\n"
+    "CRITICAL UNCERTAINTIES\n"
+    "Model availability and evolving scenario details.\n\n"
+    "RECOMMENDED NEXT STEPS\n"
+    "1. Stabilize information channels and retry synthesis.\n\n"
+    "PRIORITY DOMAIN DEEP DIVES\n"
+    "Unavailable.\n\n"
+    "SUPPORTING DOMAIN ASSESSMENTS\n"
+    "Unavailable."
+)
+
+
 def synthesizer_agent(scenario: str, domain_responses: list) -> str:
     vertexai.init(
         project=os.getenv("GOOGLE_CLOUD_PROJECT"),
@@ -10,7 +32,7 @@ def synthesizer_agent(scenario: str, domain_responses: list) -> str:
     )
     model = GenerativeModel("gemini-2.0-flash")
 
-    priority_responses = [r for r in domain_responses if r["priority"]]
+    priority_responses   = [r for r in domain_responses if r["priority"]]
     supporting_responses = [r for r in domain_responses if not r["priority"]]
 
     priority_blob = "\n\n".join([
@@ -22,47 +44,74 @@ def synthesizer_agent(scenario: str, domain_responses: list) -> str:
         for r in supporting_responses
     ])
 
-    prompt = (
-        "You are the White House Executive Synthesizer. Read all domain analyses and produce "
-        "a structured presidential brief for the President.\n\n"
-        f"Scenario: {scenario}\n\n"
-        f"PRIORITY DOMAIN ANALYSES (in-depth):\n{priority_blob}\n\n"
-        f"SUPPORTING DOMAIN ASSESSMENTS (relevance checks):\n{supporting_blob}\n\n"
-        "Produce the brief using EXACTLY these sections in this order:\n\n"
-        "SITUATION SUMMARY\n"
-        "[unified overview of the scenario drawn from all inputs]\n\n"
-        "KEY POLICY OPTIONS\n"
-        "[options drawn primarily from the priority domain analyses]\n\n"
-        "PRINCIPAL RISKS\n"
-        "[risks weighted toward priority domain findings — note any urgent "
-        "secondary risks flagged by supporting domains]\n\n"
-        "MAJOR TRADEOFFS\n"
-        "[key tensions between priority domain recommendations]\n\n"
-        "CRITICAL UNCERTAINTIES\n"
-        "[what remains unknown across all domains]\n\n"
-        "RECOMMENDED NEXT STEPS\n"
-        "[numbered actionable items for immediate presidential action]\n\n"
-        "---\n\n"
-        "PRIORITY DOMAIN DEEP DIVES\n"
-        "[For each priority domain, reproduce its full analysis under its own "
-        "heading marked with ⭐. Keep all 5 sections intact.]\n\n"
-        "---\n\n"
-        "SUPPORTING DOMAIN ASSESSMENTS\n"
-        "[For each supporting domain, reproduce its IMPACT, KEY CONCERN, and "
-        "RELEVANCE under its own heading. If a domain marked itself as not "
-        "relevant, include it anyway so the President sees full coverage.]"
-    )
+    prompt = f"""You are the White House Executive Synthesizer. Your job is to produce a \
+structured presidential brief from the domain analyses provided.
+
+SCENARIO: {scenario}
+
+PRIORITY DOMAIN ANALYSES:
+{priority_blob}
+
+SUPPORTING DOMAIN ASSESSMENTS:
+{supporting_blob}
+
+CRITICAL FORMATTING RULES — YOU MUST FOLLOW THESE EXACTLY:
+1. Do NOT add any preamble, title, or header before the first section.
+2. Do NOT write "PRESIDENTIAL BRIEF", "DATE:", "SUBJECT:", "CLASSIFICATION:", \
+"TO:", "FROM:", or any document header of any kind. The system handles those.
+3. Do NOT use markdown heading syntax (##, ###, etc.).
+4. Start your response IMMEDIATELY with the text "SITUATION SUMMARY" on the first line.
+5. Each section header must appear on its own line in ALL CAPS exactly as written below.
+6. Do NOT add --- separators between sections.
+7. Use plain text. Bold key terms with **double asterisks** only. \
+Use * at the start of a line for bullet points.
+
+YOUR RESPONSE MUST USE EXACTLY THESE 8 SECTION HEADERS IN THIS ORDER:
+
+SITUATION SUMMARY
+[2-3 paragraph unified overview of the scenario]
+
+KEY POLICY OPTIONS
+[numbered list of 4-6 specific, actionable policy options with brief descriptions]
+
+PRINCIPAL RISKS
+[bullet list of 4-6 principal risks weighted toward priority domain findings]
+
+MAJOR TRADEOFFS
+[bullet list of 3-5 key tensions between competing policy recommendations]
+
+CRITICAL UNCERTAINTIES
+[bullet list of 3-5 critical unknowns that affect decision-making]
+
+RECOMMENDED NEXT STEPS
+[numbered list of 5 immediate, specific actions for the President to authorize]
+
+PRIORITY DOMAIN DEEP DIVES
+[For each priority domain reproduce its full analysis under a heading \
+marked ⭐DOMAIN: [name]. Keep OPTIONS, RISKS, TRADEOFFS, UNCERTAINTIES intact.]
+
+SUPPORTING DOMAIN ASSESSMENTS
+[For each supporting domain write DOMAIN: [name] then IMPACT, KEY CONCERN, \
+and RELEVANCE on separate labeled lines. Include all domains even if not relevant.]
+"""
+
     try:
         response = model.generate_content(prompt)
-        return (response.text or "").strip()
+        text = (response.text or "").strip()
+
+        # Safety strip — remove any AI-generated preamble even if instructions ignored
+        import re
+        text = re.sub(r'^#+\s*PRESIDENTIAL BRIEF.*$', '', text, flags=re.IGNORECASE | re.MULTILINE)
+        text = re.sub(r'^(DATE|SUBJECT|CLASSIFICATION|TO|FROM)\s*:.*$', '', text, flags=re.IGNORECASE | re.MULTILINE)
+        text = re.sub(r'^---+\s*$', '', text, flags=re.MULTILINE)
+        text = re.sub(r'^[ \t]*$', '', text, flags=re.MULTILINE)
+
+        # Ensure starts with SITUATION SUMMARY — if not, find it and trim before it
+        match = re.search(r'^SITUATION SUMMARY', text, flags=re.IGNORECASE | re.MULTILINE)
+        if match:
+            text = text[match.start():]
+
+        return text.strip()
+
     except Exception:
-        return (
-            "SITUATION SUMMARY\nUnable to generate summary due to model error.\n\n"
-            "KEY POLICY OPTIONS\nRe-run analyses and validate assumptions.\n\n"
-            "PRINCIPAL RISKS\nDecision latency and incomplete situational awareness.\n\n"
-            "MAJOR TRADEOFFS\nTimeliness versus analytical depth.\n\n"
-            "CRITICAL UNCERTAINTIES\nModel availability and evolving scenario details.\n\n"
-            "RECOMMENDED NEXT STEPS\nStabilize information channels and retry synthesis.\n\n"
-            "---\n\nPRIORITY DOMAIN DEEP DIVES\nUnavailable.\n\n"
-            "---\n\nSUPPORTING DOMAIN ASSESSMENTS\nUnavailable."
-        )
+        return FALLBACK
