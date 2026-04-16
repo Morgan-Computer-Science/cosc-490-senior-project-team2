@@ -4,12 +4,11 @@ from google import genai
 
 load_dotenv()
 
-def _client():
-    return genai.Client(
-        vertexai=True,
-        project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-        location=os.getenv("GOOGLE_CLOUD_LOCATION"),
-    )
+_genai_client = genai.Client(
+    vertexai=True,
+    project=os.getenv("GOOGLE_CLOUD_PROJECT"),
+    location=os.getenv("GOOGLE_CLOUD_LOCATION"),
+)
 
 def critic_agent(scenario, domain_responses, executive_brief, priority_domains) -> dict:
     domains_blob = "\n\n".join(
@@ -31,7 +30,7 @@ def critic_agent(scenario, domain_responses, executive_brief, priority_domains) 
         "OVERALL VERDICT: APPROVED / APPROVED WITH CONCERNS / REQUIRES REVISION"
     )
     try:
-        response = _client().models.generate_content(
+        response = _genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt
         )
@@ -71,7 +70,7 @@ def apply_revisions(scenario, executive_brief, critic_report) -> str:
         "RECOMMENDED NEXT STEPS"
     )
     try:
-        response = _client().models.generate_content(
+        response = _genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt
         )

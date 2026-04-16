@@ -24,12 +24,11 @@ FALLBACK = (
     "Unavailable."
 )
 
-def _client():
-    return genai.Client(
-        vertexai=True,
-        project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-        location=os.getenv("GOOGLE_CLOUD_LOCATION"),
-    )
+_genai_client = genai.Client(
+    vertexai=True,
+    project=os.getenv("GOOGLE_CLOUD_PROJECT"),
+    location=os.getenv("GOOGLE_CLOUD_LOCATION"),
+)
 
 def synthesizer_agent(scenario: str, domain_responses: list) -> str:
     priority_responses   = [r for r in domain_responses if r["priority"]]
@@ -96,7 +95,7 @@ and RELEVANCE on separate labeled lines. Include all domains even if not relevan
 """
 
     try:
-        response = _client().models.generate_content(
+        response = _genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt
         )

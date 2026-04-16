@@ -17,12 +17,11 @@ DOMAINS = [
     "Justice",
 ]
 
-def _client():
-    return genai.Client(
-        vertexai=True,
-        project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-        location=os.getenv("GOOGLE_CLOUD_LOCATION"),
-    )
+_genai_client = genai.Client(
+    vertexai=True,
+    project=os.getenv("GOOGLE_CLOUD_PROJECT"),
+    location=os.getenv("GOOGLE_CLOUD_LOCATION"),
+)
 
 def query_domain_agent(domain: str, scenario: str, is_priority: bool) -> dict:
     if is_priority:
@@ -60,7 +59,7 @@ def query_domain_agent(domain: str, scenario: str, is_priority: bool) -> dict:
         f"{format_instruction}"
     )
     try:
-        response = _client().models.generate_content(
+        response = _genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt
         )

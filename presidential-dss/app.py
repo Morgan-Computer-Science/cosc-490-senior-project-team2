@@ -1030,21 +1030,20 @@ if not st.session_state.authenticated:
     st.stop()
 
 # ============================================================
-# GENAI CLIENT HELPER
+# GENAI CLIENT — module-level singleton
 # ============================================================
-def _client():
-    return _genai.Client(
-        vertexai=True,
-        project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-        location=os.getenv("GOOGLE_CLOUD_LOCATION"),
-    )
+_genai_client = _genai.Client(
+    vertexai=True,
+    project=os.getenv("GOOGLE_CLOUD_PROJECT"),
+    location=os.getenv("GOOGLE_CLOUD_LOCATION"),
+)
 
 # ============================================================
 # AI FUNCTIONS
 # ============================================================
 def ai_severity(scenario: str) -> dict:
     try:
-        r = _client().models.generate_content(
+        r = _genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=f"You are a national security threat analyst. Assess the severity.\n\nScenario: {scenario}\n\n"
             'Return ONLY valid JSON: {"level": "Low|Moderate|High|Severe", "rationale": "one sentence"}'
@@ -1057,7 +1056,7 @@ def ai_severity(scenario: str) -> dict:
 
 def ai_intel_feeds(scenario: str) -> dict:
     try:
-        r = _client().models.generate_content(
+        r = _genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=f"Generate 4 simulated intelligence feed items per category for this scenario.\n\nScenario: {scenario}\n\n"
             'Return ONLY valid JSON: {"news": [...], "health": [...], "cyber": [...]}'
@@ -1068,7 +1067,7 @@ def ai_intel_feeds(scenario: str) -> dict:
 
 def ai_map_points(scenario: str) -> list:
     try:
-        r = _client().models.generate_content(
+        r = _genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=f"Identify 6 real geographic hotspots for this crisis.\n\nScenario: {scenario}\n\n"
             'Return ONLY valid JSON list: [{"lat": 0.0, "lon": 0.0, "label": "City — reason"}]'
@@ -1087,7 +1086,7 @@ def ai_map_points(scenario: str) -> list:
 
 def ai_simulate_policy(scenario: str, brief: str) -> list:
     try:
-        r = _client().models.generate_content(
+        r = _genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=f"Generate 4 distinct policy options and simulate outcomes.\n\nScenario: {scenario}\n\nBrief:\n{brief[:1500]}\n\n"
             'Return ONLY valid JSON list: [{"option": "title", "description": "1 sentence", '
@@ -1100,7 +1099,7 @@ def ai_simulate_policy(scenario: str, brief: str) -> list:
 
 def ai_agencies(scenario: str, domains: list) -> list:
     try:
-        r = _client().models.generate_content(
+        r = _genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=f"Identify 6 critical U.S. federal agencies to activate. Priority domains: {', '.join(domains)}.\n\nScenario: {scenario}\n\n"
             'Return ONLY valid JSON list: [{"agency": "Name", "abbreviation": "ABC", '
@@ -1112,7 +1111,7 @@ def ai_agencies(scenario: str, domains: list) -> list:
 
 def ai_chain_of_command(scenario: str) -> list:
     try:
-        r = _client().models.generate_content(
+        r = _genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=f"Generate the chain of command for this scenario.\n\nScenario: {scenario}\n\n"
             'Return ONLY valid JSON list: [{"role": "President", "action": "Declare national emergency", '
@@ -1125,7 +1124,7 @@ def ai_chain_of_command(scenario: str) -> list:
 def ai_advisor_reply(question: str, context: str, history: list) -> str:
     try:
         hist_text = "\n".join([f"Q: {h['q']}\nA: {h['a']}" for h in history[-4:]])
-        r = _client().models.generate_content(
+        r = _genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=f"You are the President's Chief Strategic Advisor. Answer concisely and directly.\n\n"
             f"Briefing Context:\n{context}\n\nPrior Exchange:\n{hist_text}\n\nQuestion: {question}"

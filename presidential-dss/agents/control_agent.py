@@ -17,12 +17,11 @@ DOMAINS = [
     "Justice",
 ]
 
-def _client():
-    return genai.Client(
-        vertexai=True,
-        project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-        location=os.getenv("GOOGLE_CLOUD_LOCATION"),
-    )
+_genai_client = genai.Client(
+    vertexai=True,
+    project=os.getenv("GOOGLE_CLOUD_PROJECT"),
+    location=os.getenv("GOOGLE_CLOUD_LOCATION"),
+)
 
 def control_agent(scenario: str) -> list:
     try:
@@ -34,7 +33,7 @@ def control_agent(scenario: str) -> list:
             "Return ONLY a comma-separated list of exactly 3 domain names from the list.\n\n"
             f"Scenario: {scenario}"
         )
-        response = _client().models.generate_content(
+        response = _genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt
         )
