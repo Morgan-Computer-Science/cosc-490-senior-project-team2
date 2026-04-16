@@ -1,23 +1,20 @@
 import os
-
 from dotenv import load_dotenv
-import vertexai
-from vertexai.generative_models import GenerativeModel
+from google import genai
 
 load_dotenv()
 
-
-def critic_agent(scenario, domain_responses, executive_brief, priority_domains) -> dict:
-    vertexai.init(
+def _client():
+    return genai.Client(
+        vertexai=True,
         project=os.getenv("GOOGLE_CLOUD_PROJECT"),
         location=os.getenv("GOOGLE_CLOUD_LOCATION"),
     )
-    model = GenerativeModel("gemini-2.0-flash")
 
+def critic_agent(scenario, domain_responses, executive_brief, priority_domains) -> dict:
     domains_blob = "\n\n".join(
         [f"DOMAIN: {d['domain']} | PRIORITY: {d['priority']}\n{d['analysis']}" for d in domain_responses]
     )
-
     prompt = (
         "You are a strict Red Team Critic for presidential decision support outputs. "
         "Assess source analyses and executive synthesis quality.\n\n"
@@ -33,9 +30,11 @@ def critic_agent(scenario, domain_responses, executive_brief, priority_domains) 
         "PRIORITY ROUTING ASSESSMENT: were the right 3 domains chosen?\n"
         "OVERALL VERDICT: APPROVED / APPROVED WITH CONCERNS / REQUIRES REVISION"
     )
-
     try:
-        response = model.generate_content(prompt)
+        response = _client().models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
         report = (response.text or "").strip()
     except Exception:
         report = (
@@ -57,12 +56,6 @@ def critic_agent(scenario, domain_responses, executive_brief, priority_domains) 
 
 
 def apply_revisions(scenario, executive_brief, critic_report) -> str:
-    vertexai.init(
-        project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-        location=os.getenv("GOOGLE_CLOUD_LOCATION"),
-    )
-    model = GenerativeModel("gemini-2.0-flash")
-
     prompt = (
         "You are the Executive Brief Revision Agent. Rewrite the brief to address all critic feedback "
         "while preserving factual consistency with source analyses.\n\n"
@@ -77,9 +70,11 @@ def apply_revisions(scenario, executive_brief, critic_report) -> str:
         "CRITICAL UNCERTAINTIES\n"
         "RECOMMENDED NEXT STEPS"
     )
-
     try:
-        response = model.generate_content(prompt)
+        response = _client().models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
         return (response.text or "").strip()
     except Exception:
         return executive_brief

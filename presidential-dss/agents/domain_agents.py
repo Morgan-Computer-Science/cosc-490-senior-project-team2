@@ -1,8 +1,9 @@
 import os
 from dotenv import load_dotenv
-import vertexai
-from vertexai.generative_models import GenerativeModel
+from google import genai
+
 load_dotenv()
+
 DOMAINS = [
     "Defense",
     "Economy",
@@ -15,12 +16,15 @@ DOMAINS = [
     "Technology",
     "Justice",
 ]
-def query_domain_agent(domain: str, scenario: str, is_priority: bool) -> dict:
-    vertexai.init(
+
+def _client():
+    return genai.Client(
+        vertexai=True,
         project=os.getenv("GOOGLE_CLOUD_PROJECT"),
         location=os.getenv("GOOGLE_CLOUD_LOCATION"),
     )
-    model = GenerativeModel("gemini-2.0-flash")
+
+def query_domain_agent(domain: str, scenario: str, is_priority: bool) -> dict:
     if is_priority:
         prompt_style = (
             "You are the senior policy advisor for this domain. Provide a thorough, high-detail analysis "
@@ -56,7 +60,10 @@ def query_domain_agent(domain: str, scenario: str, is_priority: bool) -> dict:
         f"{format_instruction}"
     )
     try:
-        response = model.generate_content(prompt)
+        response = _client().models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
         analysis_text = (response.text or "").strip()
     except Exception as error:
         if is_priority:

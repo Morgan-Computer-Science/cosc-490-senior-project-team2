@@ -1,7 +1,7 @@
 import os
+import re
 from dotenv import load_dotenv
-import vertexai
-from vertexai.generative_models import GenerativeModel
+from google import genai
 
 load_dotenv()
 
@@ -24,14 +24,14 @@ FALLBACK = (
     "Unavailable."
 )
 
-
-def synthesizer_agent(scenario: str, domain_responses: list) -> str:
-    vertexai.init(
+def _client():
+    return genai.Client(
+        vertexai=True,
         project=os.getenv("GOOGLE_CLOUD_PROJECT"),
         location=os.getenv("GOOGLE_CLOUD_LOCATION"),
     )
-    model = GenerativeModel("gemini-2.0-flash")
 
+def synthesizer_agent(scenario: str, domain_responses: list) -> str:
     priority_responses   = [r for r in domain_responses if r["priority"]]
     supporting_responses = [r for r in domain_responses if not r["priority"]]
 
@@ -96,22 +96,18 @@ and RELEVANCE on separate labeled lines. Include all domains even if not relevan
 """
 
     try:
-        response = model.generate_content(prompt)
+        response = _client().models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
         text = (response.text or "").strip()
-
-        # Safety strip — remove any AI-generated preamble even if instructions ignored
-        import re
         text = re.sub(r'^#+\s*PRESIDENTIAL BRIEF.*$', '', text, flags=re.IGNORECASE | re.MULTILINE)
         text = re.sub(r'^(DATE|SUBJECT|CLASSIFICATION|TO|FROM)\s*:.*$', '', text, flags=re.IGNORECASE | re.MULTILINE)
         text = re.sub(r'^---+\s*$', '', text, flags=re.MULTILINE)
         text = re.sub(r'^[ \t]*$', '', text, flags=re.MULTILINE)
-
-        # Ensure starts with SITUATION SUMMARY — if not, find it and trim before it
         match = re.search(r'^SITUATION SUMMARY', text, flags=re.IGNORECASE | re.MULTILINE)
         if match:
             text = text[match.start():]
-
         return text.strip()
-
     except Exception:
         return FALLBACK

@@ -5,8 +5,7 @@ from datetime import datetime, timezone
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
-import vertexai
-from vertexai.generative_models import GenerativeModel
+from google import genai as _genai
 
 from agents import run_decision_support
 import db
@@ -784,7 +783,6 @@ hr { border-color: #0d1e36 !important; margin: 1rem 0 !important; }
     white-space: nowrap;
     transform: rotate(-35deg);
     user-select: none;
-    /* Repeat via text-shadow */
     text-shadow:
         0 -120px 0 rgba(74,158,255,0.045),
         0 120px 0 rgba(74,158,255,0.045),
@@ -928,13 +926,9 @@ div.small-btn > div > button {
 </style>
 """, unsafe_allow_html=True)
 
-# Clock computed in Python
-
 # ============================================================
 # CREDENTIALS & CONSTANTS
 # ============================================================
-# Users and roles are defined in db.py
-
 DOMAINS = [
     "Defense", "Economy", "Healthcare", "Foreign Policy",
     "Environment", "Education", "Energy",
@@ -1033,25 +1027,26 @@ if not st.session_state.authenticated:
             else:
                 st.session_state.login_attempts += 1
                 st.error(f"Access denied. Invalid credentials. ({st.session_state.login_attempts} failed attempt(s))")
-
-        if login_btn and VALID_USERS.get(username) == password:
-            st.markdown('<div class="login-scanning">Authenticating operator...</div>', unsafe_allow_html=True)
     st.stop()
 
 # ============================================================
-# VERTEX HELPER
+# GENAI CLIENT HELPER
 # ============================================================
-def _model() -> GenerativeModel:
-    vertexai.init(project=os.getenv("GOOGLE_CLOUD_PROJECT"), location=os.getenv("GOOGLE_CLOUD_LOCATION"))
-    return GenerativeModel("gemini-2.0-flash")
+def _client():
+    return _genai.Client(
+        vertexai=True,
+        project=os.getenv("GOOGLE_CLOUD_PROJECT"),
+        location=os.getenv("GOOGLE_CLOUD_LOCATION"),
+    )
 
 # ============================================================
 # AI FUNCTIONS
 # ============================================================
 def ai_severity(scenario: str) -> dict:
     try:
-        r = _model().generate_content(
-            f"You are a national security threat analyst. Assess the severity.\n\nScenario: {scenario}\n\n"
+        r = _client().models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"You are a national security threat analyst. Assess the severity.\n\nScenario: {scenario}\n\n"
             'Return ONLY valid JSON: {"level": "Low|Moderate|High|Severe", "rationale": "one sentence"}'
         )
         d = json.loads(r.text.strip().replace("```json","").replace("```","").strip())
@@ -1062,8 +1057,9 @@ def ai_severity(scenario: str) -> dict:
 
 def ai_intel_feeds(scenario: str) -> dict:
     try:
-        r = _model().generate_content(
-            f"Generate 4 simulated intelligence feed items per category for this scenario.\n\nScenario: {scenario}\n\n"
+        r = _client().models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"Generate 4 simulated intelligence feed items per category for this scenario.\n\nScenario: {scenario}\n\n"
             'Return ONLY valid JSON: {"news": [...], "health": [...], "cyber": [...]}'
         )
         return json.loads(r.text.strip().replace("```json","").replace("```","").strip())
@@ -1072,8 +1068,9 @@ def ai_intel_feeds(scenario: str) -> dict:
 
 def ai_map_points(scenario: str) -> list:
     try:
-        r = _model().generate_content(
-            f"Identify 6 real geographic hotspots for this crisis.\n\nScenario: {scenario}\n\n"
+        r = _client().models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"Identify 6 real geographic hotspots for this crisis.\n\nScenario: {scenario}\n\n"
             'Return ONLY valid JSON list: [{"lat": 0.0, "lon": 0.0, "label": "City — reason"}]'
         )
         pts = json.loads(r.text.strip().replace("```json","").replace("```","").strip())
@@ -1090,8 +1087,9 @@ def ai_map_points(scenario: str) -> list:
 
 def ai_simulate_policy(scenario: str, brief: str) -> list:
     try:
-        r = _model().generate_content(
-            f"Generate 4 distinct policy options and simulate outcomes.\n\nScenario: {scenario}\n\nBrief:\n{brief[:1500]}\n\n"
+        r = _client().models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"Generate 4 distinct policy options and simulate outcomes.\n\nScenario: {scenario}\n\nBrief:\n{brief[:1500]}\n\n"
             'Return ONLY valid JSON list: [{"option": "title", "description": "1 sentence", '
             '"success_prob": "65%", "economic_impact": "Moderate contraction", '
             '"public_trust": "High", "time_horizon": "30 days", "risk_level": "High"}]'
@@ -1102,8 +1100,9 @@ def ai_simulate_policy(scenario: str, brief: str) -> list:
 
 def ai_agencies(scenario: str, domains: list) -> list:
     try:
-        r = _model().generate_content(
-            f"Identify 6 critical U.S. federal agencies to activate. Priority domains: {', '.join(domains)}.\n\nScenario: {scenario}\n\n"
+        r = _client().models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"Identify 6 critical U.S. federal agencies to activate. Priority domains: {', '.join(domains)}.\n\nScenario: {scenario}\n\n"
             'Return ONLY valid JSON list: [{"agency": "Name", "abbreviation": "ABC", '
             '"role": "one sentence", "priority": "Immediate|24hr|72hr"}]'
         )
@@ -1113,8 +1112,9 @@ def ai_agencies(scenario: str, domains: list) -> list:
 
 def ai_chain_of_command(scenario: str) -> list:
     try:
-        r = _model().generate_content(
-            f"Generate the chain of command for this scenario.\n\nScenario: {scenario}\n\n"
+        r = _client().models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"Generate the chain of command for this scenario.\n\nScenario: {scenario}\n\n"
             'Return ONLY valid JSON list: [{"role": "President", "action": "Declare national emergency", '
             '"authority": "Constitutional", "timeline": "Immediate"}]'
         )
@@ -1125,8 +1125,9 @@ def ai_chain_of_command(scenario: str) -> list:
 def ai_advisor_reply(question: str, context: str, history: list) -> str:
     try:
         hist_text = "\n".join([f"Q: {h['q']}\nA: {h['a']}" for h in history[-4:]])
-        r = _model().generate_content(
-            f"You are the President's Chief Strategic Advisor. Answer concisely and directly.\n\n"
+        r = _client().models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"You are the President's Chief Strategic Advisor. Answer concisely and directly.\n\n"
             f"Briefing Context:\n{context}\n\nPrior Exchange:\n{hist_text}\n\nQuestion: {question}"
         )
         return (r.text or "").strip()
@@ -1141,9 +1142,7 @@ def apply_domain_weighting(scenario: str, weights: dict) -> str:
     if deprioritized: parts.append(f"Lower priority domains: {', '.join(deprioritized)}.")
     return scenario + ("\n\n" + " ".join(parts) if parts else "")
 
-
 def ai_footnotes(brief: str, domain_analyses: list) -> list:
-    """Match each domain agent to the section of the brief it contributed to."""
     footnotes = []
     domain_keywords = {
         "Defense":           ["military","force","troops","defense","weapon","armed","combat","threat","attack","missile","nuclear"],
@@ -1176,9 +1175,7 @@ def ai_footnotes(brief: str, domain_analyses: list) -> list:
             })
     return footnotes
 
-
 def _fmt_text(text: str) -> str:
-    """Escape HTML, convert newlines and markdown to HTML."""
     import html as _h, re
     t = _h.escape(text)
     t = t.replace("\n", "<br>")
@@ -1189,20 +1186,12 @@ def _fmt_text(text: str) -> str:
     return t
 
 def _parse_brief(text: str) -> list:
-    """
-    Split the brief into named sections based on common headers.
-    Returns list of {"title": str, "body": str, "icon": str, "color": str}
-    """
     import re
-
-    # Strip AI-generated preamble headers (## PRESIDENTIAL BRIEF, DATE:, SUBJECT:, CLASSIFICATION:, ---)
     text = re.sub(r'^#+\s*PRESIDENTIAL BRIEF\s*', '', text, flags=re.IGNORECASE|re.MULTILINE)
     text = re.sub(r'^(DATE|SUBJECT|CLASSIFICATION|TO|FROM)\s*:.*$', '', text, flags=re.IGNORECASE|re.MULTILINE)
     text = re.sub(r'^---+\s*$', '', text, flags=re.MULTILINE)
-    text = re.sub(r'^[ \t]*$', '', text, flags=re.MULTILINE)  # remove blank lines left behind
+    text = re.sub(r'^[ \t]*$', '', text, flags=re.MULTILINE)
     text = text.strip()
-
-    # Known section headers in the AI output
     section_defs = [
         ("SITUATION SUMMARY",        "SITUATION SUMMARY",     "◉", "#4a9eff"),
         ("KEY POLICY OPTIONS",        "KEY POLICY OPTIONS",    "⚙", "#60c0ff"),
@@ -1213,32 +1202,24 @@ def _parse_brief(text: str) -> list:
         ("PRIORITY DOMAIN DEEP DIVES","PRIORITY DOMAINS",      "★", "#4a9eff"),
         ("SUPPORTING DOMAIN",         "SUPPORTING DOMAINS",    "◇", "#2a6080"),
     ]
-    # Build pattern
-    # Match headers even if wrapped in **, ##, or extra whitespace
     pattern = "|".join(r"(?:\*\*|##\s*)?" + re.escape(s[0]) + r"(?:\*\*)?" for s in section_defs)
     parts = re.split(f"({pattern})", text, flags=re.IGNORECASE)
-
     sections = []
-    # Anything before the first header
     if parts[0].strip():
         sections.append({"title": "Overview", "body": parts[0].strip(), "icon": "◉", "color": "#4a9eff"})
-
     i = 1
     while i < len(parts):
         header = parts[i].strip().upper()
         body   = parts[i+1].strip() if i+1 < len(parts) else ""
         i += 2
-        # Match to section def
         matched = next((s for s in section_defs if s[0] in header), None)
         if matched:
             sections.append({"title": matched[1], "body": body, "icon": matched[2], "color": matched[3]})
         else:
             sections.append({"title": header.title(), "body": body, "icon": "◇", "color": "#2a6080"})
-
     return sections
 
 def _fmt_brief(text: str) -> str:
-    """Legacy single-block formatter — kept for fallback."""
     return _fmt_text(text)
 
 # ============================================================
@@ -1257,18 +1238,13 @@ _tz_lbl   = "EDT" if _est_off == -4 else "EST"
 now       = _est_now.strftime(f"%B %d, %Y — %H:%M {_tz_lbl}")
 res       = st.session_state.current_result
 
-# Unread counts for badges
 _unread_msgs   = db.get_unread_message_count(user)
 _unread_briefs = db.get_unread_brief_count(user)
 
-# Classification banner + logout row
 st.markdown('<div class="classbar">SIMULATED EXERCISE — NOT REAL INTELLIGENCE — FOR DEMONSTRATION PURPOSES ONLY</div>', unsafe_allow_html=True)
 
-
-
-# Hero with inline clock
 import streamlit.components.v1 as _components
-# Build status chips html for embedding in hero
+
 if res:
     _sev_h = res.get("severity", "Moderate")
     _sev_css_h, _sev_lbl_h, _chip_cls_h, _, _ = SEVERITY_META.get(_sev_h, SEVERITY_META["Moderate"])
@@ -1334,7 +1310,6 @@ st.markdown(f"""<div class="hero">
   </div>
 </div>""", unsafe_allow_html=True)
 
-# Handle ?logout=1 query param — only if actually logged in
 if st.query_params.get("logout") and st.session_state.get("authenticated"):
     _tok = st.session_state.get("session_token", "")
     if _tok:
@@ -1367,16 +1342,9 @@ _components.html("""
 </script>
 """, height=0)
 
-
-
-# (status strip now embedded in hero)
-
 # ── Sidebar ──────────────────────────────────────────────────
 with st.sidebar:
-    # ── Operator card ──
     _badge_color = "#4a9eff" if user_role == "president" else ("#ffb84d" if user_role == "admin" else "#3ddc6e")
-
-    # ── Operator card ──────────────────────────────────────────
     st.markdown(f"""
     <div style="background:#040c16;border:1px solid #0d1e36;border-left:3px solid {_badge_color};
                 border-radius:8px;padding:12px 14px;margin-bottom:10px;">
@@ -1388,7 +1356,6 @@ with st.sidebar:
         </div>
     </div>""", unsafe_allow_html=True)
 
-    # ── Logout buttons — always visible ────────────────────────
     if st.button("Log Out", use_container_width=True, key="sidebar_logout", type="primary"):
         _tok = st.session_state.get("session_token", "")
         if _tok: _delete_session(_tok)
@@ -1403,7 +1370,6 @@ with st.sidebar:
 
     st.divider()
 
-    # ── Previous briefs (DB) ──
     _prev_briefs = db.list_briefs(operator=user if user_role == "president" else None, limit=20)
     if _prev_briefs:
         st.markdown("### Previous Briefs")
@@ -1418,7 +1384,6 @@ with st.sidebar:
                     st.rerun()
         st.divider()
 
-    # ── Scenarios (president only) ──
     if user_role == "president":
         st.markdown("### Scenarios")
         _scenario_labels = list(SCENARIO_EXAMPLES.keys())
@@ -1459,9 +1424,8 @@ else:
     _ticker_text = 'PDSS ONLINE <span class="ticker-sep">///</span> ALL SYSTEMS NOMINAL <span class="ticker-sep">///</span> 10 DOMAIN AGENTS ON STANDBY <span class="ticker-sep">///</span> AWAITING SCENARIO INPUT <span class="ticker-sep">///</span> CLASSIFIED SYSTEM — AUTHORIZED PERSONNEL ONLY'
 st.markdown(f'<div class="ticker-wrap"><div class="ticker-inner">{_ticker_text}</div></div>', unsafe_allow_html=True)
 
-# ── Last run summary card ──────────────────────────────────────
 if _db_archive:
-    _last = _db_archive[0]  # most recent first
+    _last = _db_archive[0]
     _lsev    = _last.get("severity", "Moderate")
     _lcolor  = SEVERITY_META.get(_lsev, SEVERITY_META["Moderate"])[4]
     _lverdict = _last.get("verdict", "—")
@@ -1480,8 +1444,6 @@ if _db_archive:
         </div>
     </div>""", unsafe_allow_html=True)
 
-# ── Scenario input panel ───────────────────────────────────────
-# ── Previous briefs panel (all roles) ────────────────────────
 _prev = db.list_briefs(operator=user, limit=20) if user_role == "president" else []
 if _prev:
     with st.expander(f"Previous Briefs ({len(_prev)})", expanded=False):
@@ -1531,7 +1493,6 @@ text-transform:uppercase;margin-bottom:6px;">
 else:
     scenario = ""
     run_btn  = False
-    pass  # chain users see briefs in the PDB tab
 
 # ============================================================
 # RUN PIPELINE
@@ -1589,13 +1550,11 @@ if run_btn:
     db.save_brief(result)
     st.session_state.current_result = result
     st.session_state.chat_history   = []
-    # Brief already saved to DB via db.save_brief(result) above
     st.rerun()
 
 # ============================================================
 # RESULTS
 # ============================================================
-# ── Always-visible tabs ───────────────────────────────────────
 _inbox_badge = f" ({_unread_briefs})" if _unread_briefs > 0 else ""
 _msg_badge   = f" ({_unread_msgs})" if _unread_msgs > 0 else ""
 tabs = st.tabs([
@@ -1619,7 +1578,6 @@ if st.session_state.current_result:
     v_css   = "v-approved" if verdict == "APPROVED" else ("v-concerns" if "CONCERNS" in verdict else "v-revision")
     v_icon  = "APPROVED" if verdict == "APPROVED" else ("CONCERNS" if "CONCERNS" in verdict else "REVISION REQUIRED")
 
-    # ── TAB 1: Executive Brief ────────────────────────────────
     with tabs[0]:
         st.markdown(f"""
         <div class="kpi-row">
@@ -1652,7 +1610,6 @@ if st.session_state.current_result:
 
         st.divider()
 
-        # ── Build footnotes ──
         _footnotes = ai_footnotes(res["executive_brief"], res["domain_analyses"])
         _bid = res.get("briefing_id", "PDSS-UNKNOWN")
         _wm_text = f"{res['operator'].upper()} // {sev.upper()} // {res['timestamp']}"
@@ -1665,12 +1622,10 @@ if st.session_state.current_result:
                 <span class="footnote-desc"> — {fn["desc"]}</span></span>
             </div>'''
 
-        # ── Render brief in separate pieces to avoid Streamlit f-string size limit ──
         _subject = _html.escape(res['scenario_raw'][:120]) + ('...' if len(res['scenario_raw'])>120 else '')
         _verdict_color = '#3ddc6e' if verdict=='APPROVED' else '#ffb84d'
         _brief_body = _fmt_brief(res["executive_brief"])
 
-        # Panel open + watermark + memo header
         st.markdown(f"""<div class="panel brief-container" style="border-left:3px solid {sev_color};padding:22px 24px;">
           <div class="brief-watermark"><div class="brief-watermark-text">{_wm_text}</div></div>
           <div class="brief-content">
@@ -1683,13 +1638,9 @@ if st.session_state.current_result:
               <div class="brief-memo-subject">SUBJECT: {_subject}</div>
             </div>""", unsafe_allow_html=True)
 
-        # Body text — rendered separately so size doesn't break the call
         st.markdown(f'<div style="color:#a8c0dc;font-size:0.9rem;line-height:1.85;padding:0 0 16px 0;">{_brief_body}</div>', unsafe_allow_html=True)
-
-        # Footnotes
         st.markdown(f'<div class="footnotes-block"><div class="footnotes-title">Analytical Sources</div>{_footnotes_html}</div>', unsafe_allow_html=True)
 
-        # Signature block + panel close
         st.markdown(f"""
           <div class="sig-block">
             <div class="sig-row">
@@ -1728,7 +1679,6 @@ if st.session_state.current_result:
         st.download_button("Download Full Report (.txt)", data=report,
                            file_name="pdss_report.txt", mime="text/plain")
 
-        # ── Distribute brief ──
         if user_role == "president":
             st.divider()
             st.markdown("#### Distribute This Brief")
@@ -1752,7 +1702,6 @@ if st.session_state.current_result:
                     _to_users = [_dist_options[l] for l in _selected_labels]
                     if _to_users:
                         db.distribute_brief(res["briefing_id"], user, _to_users, _dist_note)
-                        # Auto-send a message notification to each recipient
                         for _ru in _to_users:
                             _ru_info = db.get_user(_ru)
                             db.send_message(
@@ -1766,7 +1715,6 @@ if st.session_state.current_result:
                     else:
                         st.warning("Select at least one recipient.")
 
-            # Show who it's been sent to
             _dlist = db.get_distribution_list(res.get("briefing_id",""))
             if _dlist:
                 st.markdown('<div class="panel-title" style="margin-top:12px;">Distribution Record</div>', unsafe_allow_html=True)
@@ -1782,7 +1730,6 @@ if st.session_state.current_result:
                         unsafe_allow_html=True
                     )
 
-    # ── TAB 2: Intelligence ───────────────────────────────────
     with tabs[1]:
         intel = res.get("intel", {})
         c1, c2, c3 = st.columns(3)
@@ -1799,7 +1746,6 @@ if st.session_state.current_result:
             for item in intel.get("cyber", []):
                 st.markdown(f'<div class="intel-item cyber">{item}</div>', unsafe_allow_html=True)
 
-    # ── TAB 3: Threat Theater ─────────────────────────────────
     with tabs[2]:
         map_pts = res.get("map_pts", [])
         if map_pts:
@@ -1819,13 +1765,11 @@ if st.session_state.current_result:
         else:
             st.info("No map data available for this scenario.")
 
-    # ── TAB 4: Policy Simulation ──────────────────────────────
     with tabs[3]:
         sims = res.get("simulations", [])
         if sims:
             st.markdown("#### Policy Option Simulation Engine")
             st.dataframe(pd.DataFrame(sims), use_container_width=True, hide_index=True)
-
             chart_data = {}
             for s in sims:
                 try:
@@ -1836,7 +1780,6 @@ if st.session_state.current_result:
             if chart_data:
                 st.markdown("#### Success Probability by Option")
                 st.bar_chart(pd.DataFrame.from_dict(chart_data, orient="index", columns=["Success Probability (%)"]))
-
             st.markdown("#### Option Deep Dives")
             for s in sims:
                 with st.expander(f"Option — {s.get('option','Option')}"):
@@ -1850,7 +1793,6 @@ if st.session_state.current_result:
         else:
             st.info("No policy simulations generated for this run.")
 
-    # ── TAB 5: Command & Agencies ─────────────────────────────
     with tabs[4]:
         col_ag, col_cc = st.columns([1, 1])
         with col_ag:
@@ -1877,27 +1819,22 @@ if st.session_state.current_result:
             else:
                 st.info("No chain of command data generated.")
 
-    # ── TAB 6: Domain Agents ──────────────────────────────────
     with tabs[5]:
         st.markdown("#### All Domain Agent Reports")
         priority_entries   = [e for e in res["domain_analyses"] if e["priority"]]
         supporting_entries = [e for e in res["domain_analyses"] if not e["priority"]]
-
         st.markdown("**Priority Domains — Deep Analysis**")
         for e in priority_entries:
             with st.expander(f"[PRIORITY] {e['domain']}"):
                 st.markdown(f'<div style="border-left:3px solid {sev_color};padding-left:12px;">{e["analysis"]}</div>', unsafe_allow_html=True)
-
         st.markdown("**Supporting Domains — Relevance Check**")
         for e in supporting_entries:
             with st.expander(e["domain"]):
                 st.markdown(e["analysis"])
 
-    # ── TAB 7: AI Advisor ─────────────────────────────────────
     with tabs[6]:
         st.markdown("#### Chief Strategic Advisor")
         st.caption("Ask any question about the current briefing.")
-
         context = (
             f"Scenario: {res['scenario_raw']}\n\n"
             f"Severity: {res['severity']} — {res['sev_rationale']}\n\n"
@@ -1905,15 +1842,11 @@ if st.session_state.current_result:
             f"Verdict: {res['verdict']}\n\n"
             f"Executive Brief:\n{res['executive_brief'][:2000]}"
         )
-
         for h in st.session_state.chat_history:
             st.markdown(f'<div class="chat-msg chat-user"><div class="chat-label chat-label-user">Operator</div>{h["q"]}</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="chat-msg chat-ai"><div class="chat-label chat-label-ai">Chief Advisor</div>{h["a"]}</div>', unsafe_allow_html=True)
-
-        # Auto-clear input after submit by rotating key
         if "advisor_input_key" not in st.session_state:
             st.session_state.advisor_input_key = 0
-
         q_col, btn_col = st.columns([5, 1])
         with q_col:
             question = st.text_input(
@@ -1924,14 +1857,12 @@ if st.session_state.current_result:
             )
         with btn_col:
             ask_btn = st.button("Ask", use_container_width=True)
-
         if ask_btn and question.strip():
             with st.spinner("Advisor responding..."):
                 answer = ai_advisor_reply(question, context, st.session_state.chat_history)
             st.session_state.chat_history.append({"q": question, "a": answer})
-            st.session_state.advisor_input_key += 1  # rotate key → clears input
+            st.session_state.advisor_input_key += 1
             st.rerun()
-
         if st.session_state.chat_history:
             if st.button("Clear Conversation"):
                 st.session_state.chat_history = []
@@ -1939,7 +1870,6 @@ if st.session_state.current_result:
                 st.rerun()
 
 else:
-    # ── No brief loaded ───────────────────────────────────────
     with tabs[0]:
         if user_role == "president":
             st.markdown("""
@@ -1959,7 +1889,6 @@ else:
                 <span class="redacted-line" style="width:55%;"></span>
             </div>""", unsafe_allow_html=True)
         else:
-            # Chain user — show inbox briefs directly in PDB tab
             st.markdown(f"""
             <div style="background:#070e1a;border:1px solid #0d1e36;border-left:3px solid #1a4fa0;
                         border-radius:10px;padding:20px 24px;margin-bottom:1rem;">
@@ -1970,15 +1899,12 @@ else:
                     Load a brief from there to view the full analysis.
                 </div>
             </div>""", unsafe_allow_html=True)
-            # Briefs are available in the Inbox tab
             st.info("Check the Inbox tab to view and load briefs distributed to you.")
     for _ti in [1, 2, 3, 4, 5, 6]:
         with tabs[_ti]:
             st.info("Load a brief to view this section.")
 
-# ── ALWAYS-VISIBLE: Inbox, Messages, Archive ─────────────────
-# ── TAB 8: Archive ────────────────────────────────────────
-# ── TAB 8: Inbox (Distributed Briefs) ───────────────────────
+# ── TAB 8: Inbox ─────────────────────────────────────────────
 with tabs[7]:
     st.markdown("#### Intelligence Inbox — Distributed Briefs")
     _dist_briefs = db.list_distributed_briefs(user)
@@ -1988,28 +1914,11 @@ with tabs[7]:
             _sev_color_ib = SEVERITY_META.get(_db_entry["severity"], SEVERITY_META["Moderate"])[4]
             _sender_info  = db.get_user(_db_entry["operator"])
             _sender_disp  = _sender_info["display"] if _sender_info else _db_entry["operator"].upper()
-            _unread_style = "border-left:3px solid #4a9eff;" if _is_unread else f"border-left:3px solid {_sev_color_ib};"
             _unread_badge_ib = '<span style="font-size:0.60rem;background:#0a2448;color:#4a9eff;padding:2px 7px;border-radius:3px;margin-bottom:6px;display:inline-block;">UNREAD</span><br>' if _is_unread else ""
-            _note_html_ib    = f'<div style="font-size:0.75rem;color:#4a7a9a;margin-top:8px;border-top:1px solid #0d1e36;padding-top:8px;">Note: {_db_entry["note"]}</div>' if _db_entry.get("note") else ""
             _entry_id        = _db_entry["id"]
             _entry_scenario  = _db_entry["scenario"][:120]
             _entry_sev       = _db_entry["severity"].upper()
             _entry_sent      = _db_entry["sent_at"][:16]
-            _inbox_card = (
-                f'<div class="panel" style="{_unread_style};padding-bottom:8px;">' +
-                '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
-                '<div>' + _unread_badge_ib +
-                f'<div style="font-size:0.70rem;color:#2a5a8a;letter-spacing:0.10em;margin-bottom:4px;">{_entry_id} — FROM: {_sender_disp}</div>' +
-                f'<div style="font-size:0.86rem;color:#9ab8d4;margin-bottom:10px;">{_entry_scenario}...</div>' +
-                '</div>' +
-                f'<div style="text-align:right;flex-shrink:0;margin-left:16px;">' +
-                f'<span style="font-size:0.68rem;color:{_sev_color_ib};">{_entry_sev}</span><br>' +
-                f'<span style="font-size:0.62rem;color:#2a5a8a;">{_entry_sent}</span>' +
-                '</div></div>' + _note_html_ib +
-                '</div>'
-            )
-            # Render card and button together using negative margin trick
-            # Render card info + buttons in one styled container
             with st.container(border=True):
                 st.markdown(
                     f'<div style="font-size:0.72rem;color:#2a5a8a;letter-spacing:0.08em;margin-bottom:6px;">' +
@@ -2041,7 +1950,7 @@ with tabs[7]:
     else:
         st.info("No briefs have been distributed to you yet.")
 
-# ── TAB 9: Messages ───────────────────────────────────────
+# ── TAB 9: Messages ───────────────────────────────────────────
 with tabs[8]:
     st.markdown("#### Secure Message Center")
     _msg_tab1, _msg_tab2, _msg_tab3 = st.tabs(["Inbox", "Sent", "Compose"])
@@ -2053,14 +1962,12 @@ with tabs[8]:
                 _is_unread_m = not _msg.get("read_at")
                 _from_info   = db.get_user(_msg["from_user"])
                 _from_disp   = _from_info["display"] if _from_info else _msg["from_user"].upper()
-                _border      = "border-left:3px solid #4a9eff;" if _is_unread_m else "border-left:3px solid #0d1e36;"
                 with st.expander(f"{'🔵 ' if _is_unread_m else ''}{_from_disp} — {_msg['subject']} [{_msg['sent_at'][:16]}]"):
                     db.mark_message_read(_msg["id"])
                     st.markdown(f'<div style="font-size:0.72rem;color:#2a5a8a;margin-bottom:8px;">FROM: {_from_disp} &nbsp;|&nbsp; {_msg["sent_at"][:16]}</div>', unsafe_allow_html=True)
                     if _msg.get("briefing_id"):
                         st.markdown(f'<div style="font-size:0.68rem;color:#1a4fa0;margin-bottom:8px;">RE: Brief {_msg["briefing_id"]}</div>', unsafe_allow_html=True)
                     st.markdown(f'<div style="font-size:0.86rem;color:#9ab8d4;white-space:pre-wrap;">{_msg["body"]}</div>', unsafe_allow_html=True)
-                    # Quick reply
                     _reply_key = f"reply_{_msg['id']}"
                     _reply_body = st.text_area("Reply", key=_reply_key, height=80, placeholder="Type reply...")
                     if st.button("Send Reply", key=f"reply_btn_{_msg['id']}"):
@@ -2105,6 +2012,7 @@ with tabs[8]:
             else:
                 st.warning("Subject and message body are required.")
 
+# ── TAB 10: Archive ───────────────────────────────────────────
 with tabs[9]:
     st.markdown("#### Decision Run Archive")
     _all_briefs = db.list_briefs(operator=user if user_role != "admin" else None, limit=100)
@@ -2123,4 +2031,4 @@ with tabs[9]:
             data=json.dumps(_export_data, indent=2, default=str),
             file_name=f"pdss_run_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json",
             mime="application/json",
-    )
+        )
