@@ -40,8 +40,30 @@ Open **Chrome or Firefox** and go to `http://localhost:8501`. Safari has known J
 ## Prerequisites
 
 - Python 3.12+
-- A Google Cloud Platform account with Vertex AI API enabled on the `presidential-dss` project
 - Git
+- A Google Cloud Platform account with the following APIs enabled on the `presidential-dss` project:
+
+| API | Service Name |
+|-----|-------------|
+| Vertex AI API | `aiplatform.googleapis.com` |
+| Generative Language API (Gemini) | `generativelanguage.googleapis.com` |
+| Cloud Storage API | `storage.googleapis.com` |
+| Identity and Access Management API | `iam.googleapis.com` |
+| Discovery Engine API | `discoveryengine.googleapis.com` |
+
+Enable them all at once from the terminal:
+
+```bash
+gcloud services enable \
+  aiplatform.googleapis.com \
+  generativelanguage.googleapis.com \
+  storage.googleapis.com \
+  iam.googleapis.com \
+  discoveryengine.googleapis.com \
+  --project=presidential-dss
+```
+
+Or enable them one at a time in the GCP Console under **APIs & Services → Library**.
 
 ---
 
